@@ -85,11 +85,11 @@ else
     ${TF_CFLAGS[@]} -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC --expt-relaxed-constexpr
 
   g++ -std=c++14 -shared -o ${OP_NAME}.so ${OP_NAME}.cc ${OP_NAME}_kernel.cc \
-    ${OP_NAME}_kernel.cu.o ${TF_CFLAGS[@]} -fPIC -lcudart ${TF_LFLAGS[@]}
+    ${OP_NAME}_kernel.cu.o ${TF_CFLAGS[@]} -fPIC -L${CUDA_DIR}/lib64 -lcudart ${TF_LFLAGS[@]}
 fi
 
 # PYTHONPATH
-export PYTHONPATH=$PYTHONPATH:`pwd`:`pwd`/models:`pwd`/cocoapi/PythonAPI
+export PYTHONPATH=$PYTHONPATH:`pwd`:`pwd`/models
 
 # Runing test
 echo "-----------------------------------------------------------------------"
