@@ -58,6 +58,11 @@ flags.DEFINE_integer(
     'parameter specifies whether GPUs should be used and how many of them '
     '(default: 0).')
 
+flags.DEFINE_string(
+    'benchmark_log',
+    default=None,
+    help='The path to use to report benchmark results')
+
 FLAGS = flags.FLAGS
 
 
@@ -69,7 +74,7 @@ def main(_):
   logging.info('Starting the experiment.')
   combined_model_dir = os.path.join(FLAGS.model_dir, config.experiment_name)
   train_lib.run_experiment(FLAGS.mode, config, combined_model_dir, FLAGS.master,
-                           FLAGS.num_gpus)
+                           FLAGS.num_gpus, FLAGS.benchmark_log)
 
 
 if __name__ == '__main__':

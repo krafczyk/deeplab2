@@ -17,6 +17,7 @@
 import functools
 import os
 from typing import Text, Optional, Sequence
+import time
 
 from absl import logging
 import orbit
@@ -78,7 +79,8 @@ def build_deeplab_model(deeplab_model: tf.keras.Model,
 
 
 def run_experiment(mode: Text, config: config_pb2.ExperimentOptions,
-                   model_dir: Text, tpu: Optional[Text], num_gpus: int):
+                   model_dir: Text, tpu: Optional[Text], num_gpus: int,
+                   benchmark_log: Optional[Text]):
   """Runs an experiment.
 
   Args:
@@ -100,6 +102,12 @@ def run_experiment(mode: Text, config: config_pb2.ExperimentOptions,
     ValueError: If mode includes `eval` and num_gpus > 1. Currently, evaluation
       is not supported on more than a single GPU.
   """
+  if benchmark_log is not None:
+    benchmark_file = open(benchmark_log, 'w')
+    benchmark_file.write(f"Num GPUs: {num_gpus}\n")
+
+  setup_start = time.time()
+
   strategy = distribution_utils.create_strategy(tpu, num_gpus)
   logging.info('Using strategy %s with %d replicas', type(strategy),
                strategy.num_replicas_in_sync)
@@ -179,6 +187,12 @@ def run_experiment(mode: Text, config: config_pb2.ExperimentOptions,
       summary_dir=os.path.join(model_dir, 'train'),
       eval_summary_dir=os.path.join(model_dir, 'eval'))
 
+  train_start = time.time()
+  if benchmark_log is not None:
+      # Compute setup time
+      setup_time = train_start-setup_start
+      benchmark_file.write(f"Setup Time: {setup_time:.2f}s\n")
+
   with strategy.scope():
     # Save initial checkpoint.
     if 'train' in mode:
@@ -208,3 +222,12 @@ def run_experiment(mode: Text, config: config_pb2.ExperimentOptions,
           steps=config.evaluator_options.eval_steps, timeout=timeout)
     else:
       raise ValueError('Mode %s is not a valid mode.' % mode)
+
+  if benchmark_log is not None:
+    # Compute setup time
+    train_stop = time.time()
+    train_time = train_stop-train_start
+    time_per_step = train_time/config.trainer_options.solver_options.training_number_of_steps
+    benchmark_file.write(f"Number of steps: {config.trainer_options.solver_options.training_number_of_steps}\n")
+    benchmark_file.write(f"Total Train time: {train_time:.2f}s\n")
+    benchmark_file.write(f"Time per train step: {time_per_step*1000:.2f}ms\n")
